@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KAN Visualizer (Presentation Mode)</title>
+    <style>
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #eaeff2; display: flex; flex-direction: column; align-items: center; padding: 40px; color: #333; }
+        
+        /* --- 1. SHORT HEADER --- */
+        .main-header { text-align: center; max-width: 800px; margin-bottom: 20px; }
+        .main-header h1 { font-size: 28px; color: #2c3e50; margin-bottom: 5px; letter-spacing: -0.5px; }
+        .main-header p { font-size: 16px; color: #78909c; margin: 0; }
+
+        /* Container */
+        .container { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 800px; }
+        
+        /* Typography inside tool */
+        h2 { text-align: center; margin-top: 0; color: #333; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 20px; }
+
+        /* Canvas & Graphs */
+        canvas { border: 1px solid #eee; border-radius: 6px; cursor: crosshair; display: block; margin-bottom: 8px; background: #fafafa; }
+        .graph-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px; margin-top: 20px; font-weight: 700; }
+
+        /* Controls Area */
+        .controls-area { background: #f9f9f9; padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid #eee; }
+        .controls { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-top: 15px; }
+        .slider-group { display: flex; flex-direction: column; align-items: center; padding: 8px 2px; border-radius: 6px; transition: background 0.2s; }
+        label { font-size: 11px; color: #555; font-weight: bold; margin-bottom: 5px;}
+        input[type=range] { width: 100%; cursor: pointer; }
+
+        /* Input Slider Stylization */
+        .input-row { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .input-val { font-family: monospace; font-weight: bold; color: #2196F3; font-size: 16px; min-width: 45px; text-align: right;}
+
+        /* Dynamic Info Box */
+        .info-box {
+            margin-top: 15px;
+            padding: 12px 18px;
+            background: #fff8e1; 
+            border-left: 5px solid #ff9800;
+            color: #555;
+            font-size: 14px;
+            border-radius: 4px;
+            line-height: 1.5;
+        }
+        .highlight-text { color: #e65100; font-weight: bold; }
+
+        /* --- SPEECH CONTENT SECTION --- */
+        .speech-section {
+            margin-top: 40px;
+            padding: 25px 30px;
+            background: #f0f7ff; /* Very light blue background */
+            border-left: 6px solid #2196F3; /* Strong blue accent */
+            border-radius: 0 8px 8px 0;
+            color: #2c3e50;
+        }
+        .speech-section h3 {
+            margin-top: 0;
+            color: #1565C0;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .speech-section p {
+            line-height: 1.7; /* Easy to read */
+            font-size: 15px;
+            margin-bottom: 15px;
+        }
+        .speech-section p:last-child { margin-bottom: 0; }
+        .speech-icon { font-size: 20px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="main-header">
+        <h1>Understanding Learnable Activation Functions</h1>
+        <p>Interactive demonstration of Kolmogorov-Arnold Networks (KANs) Splines and Grids</p>
+    </div>
+
+    <div class="container">
+        
+        <div class="graph-label">1. The Fixed Basis Functions (B)</div>
+        <canvas id="canvas_basis" width="800" height="180"></canvas>
+
+        <div class="graph-label">2. The Learned Shape (w · B)</div>
+        <canvas id="canvas_spline" width="800" height="280"></canvas>
+        
+        <div class="controls-area">
+            <div class="input-row">
+                <label style="font-size: 14px; min-width: 60px;">Input X:</label>
+                <input type="range" id="input_x" min="-1" max="1" step="0.01" value="0.0" style="flex-grow: 1;">
+                <span id="x_val_disp" class="input-val">0.00</span>
+            </div>
+
+            <div id="active-info" class="info-box">Initialize...</div>
+
+            <div class="controls" id="coeffs_container"></div>
+        </div>
+
+        <div class="speech-section">
+            <h3><span class="speech-icon">📝</span> Notes</h3>
+            
+            <p>
+                <b>[Intro / Context]</b> Traditional Neural Networks rely on learning the "weights" on the edges to learn the correct idea behind obtaining an output that fits the dataset. However, KANs depend on "learnable" weights that try and learn the "shape" of the function that describes the data. This demonstration seeks to explain with ease, the idea behind the networks. Move the input slider between values -1 to 1 and see the activated splines for that value.
+            </p>
+            <p>
+                <b>[The Mechanics]</b> In the above graphs, we first demonstrate the fixed basis "B-splines". [The very first graph] These are like the constant shapes placed at certain points of our shape estimating grids that do not inherently change. It is their "coefficients" that the KANs learn to match the expected output function.
+
+In the second graph, the blue curve denotes the "actual" function that describes our dataset [hypothetical for now]. For any given input, we aim to utilize the fixed splines to approximate the exact output point- as close to the blue curve point for that input as possible. Notice how at any point, only the orange splines are the one used to estimate that output point for the corresponding given input. These are the "active" splines. The rest have their coefficients or, weights, set to 0.
+ In general, for a spline of degree k, we expect 'k+1' B splines to help estimate a given point. However, when you are very close to the "knot" points, or what we can call as, the "grid" points, often, coefficient of one of these 'k+1' B splines tends very close to zero (but does not actually hit zero) hence in our demonstration you would observe, close to the knot points, only 'k' B splines are shown as active. The c sliders are what the network eventually aspires to learn. Here, you can choose to shift them like knobs to see the change. [Here the spline has been taken to be of degree 3. The range of "learnable" c's taken to be between -2 and 2, for simplicity.]            </p>
+            <p>
+                <b>[End Note]</b> KANs have made the interpretability problem of the standard black box MLPs way easier. However, it remains to be yet tested on larger parameter based problems. 
+            </p>
+        </div>
+
+    </div>
+
+<script>
+    // --- CONFIGURATION ---
+    const K = 3; 
+    const GRID_MIN = -1.0;
+    const GRID_MAX = 1.0;
+    const G = 5; 
+    
+    // Knot Vector
+    const step = (GRID_MAX - GRID_MIN) / G;
+    let knots = [];
+    for(let i=0; i<K; i++) knots.push(GRID_MIN - (K-i)*step);
+    for(let i=0; i<=G; i++) knots.push(GRID_MIN + i*step);
+    for(let i=1; i<=K; i++) knots.push(GRID_MAX + i*step);
+
+    const num_coeffs = knots.length - (K + 1); 
+    let coeffs = [0.2, 0.8, -0.5, 1.2, 0.3, -0.8, 0.1, 0.0];
+    
+    // --- MATH ---
+    function basis(i, k, x) {
+        if (k === 0) return (x >= knots[i] && x < knots[i+1]) ? 1.0 : 0.0;
+        let term1 = 0, term2 = 0;
+        const den1 = knots[i+k] - knots[i];
+        if (den1 > 1e-6) term1 = ((x - knots[i]) / den1) * basis(i, k-1, x);
+        const den2 = knots[i+k+1] - knots[i+1];
+        if (den2 > 1e-6) term2 = ((knots[i+k+1] - x) / den2) * basis(i+1, k-1, x);
+        return term1 + term2;
+    }
+
+    function evaluateSpline(x) {
+        let sum = 0;
+        let components = [];
+        for(let i=0; i<num_coeffs; i++) {
+            let b = basis(i, K, x);
+            let val = coeffs[i] * b;
+            sum += val;
+            components.push({idx: i, val: val, basis: b});
+        }
+        return { sum, components };
+    }
+
+    // --- VISUALIZATION HELPERS ---
+    const width = 800;
+    function toScreenX(x) { return (x - GRID_MIN) / (GRID_MAX - GRID_MIN) * width; }
+    
+    function drawCommonElements(ctx, height, inputX) {
+        ctx.clearRect(0, 0, width, height);
+        // Grid
+        ctx.strokeStyle = "#eef2f5"; ctx.lineWidth = 1; ctx.beginPath();
+        for(let k of knots) {
+             if(k >= GRID_MIN && k <= GRID_MAX) { let kx = toScreenX(k); ctx.moveTo(kx, 0); ctx.lineTo(kx, height); }
+        }
+        ctx.stroke();
+        // Input Marker
+        let screenX = toScreenX(inputX);
+        ctx.strokeStyle = "rgba(255, 0, 0, 0.25)"; ctx.setLineDash([5, 5]); ctx.lineWidth = 1; ctx.beginPath();
+        ctx.moveTo(screenX, 0); ctx.lineTo(screenX, height); ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    // --- DRAW GRAPH 1 ---
+    function drawBasisGraph(activeIndices, inputX) {
+        const canvas = document.getElementById('canvas_basis');
+        const ctx = canvas.getContext('2d');
+        const height = canvas.height;
+        function toY(y) { return height - (y * (height * 0.85)) - 10; } 
+
+        drawCommonElements(ctx, height, inputX);
+        ctx.textAlign = "center"; ctx.font = "10px sans-serif";
+
+        for(let i=0; i<num_coeffs; i++) {
+            let isActive = activeIndices.includes(i);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = isActive ? "#ff9800" : "#e0e0e0";
+            if(isActive) ctx.fillStyle = "rgba(255, 165, 0, 0.1)"; 
+
+            ctx.beginPath();
+            for(let j=0; j<=width; j+=5) {
+                let x = GRID_MIN + (j/width)*(GRID_MAX-GRID_MIN);
+                let y = basis(i, K, x);
+                if(j==0) ctx.moveTo(j, toY(y)); else ctx.lineTo(j, toY(y));
+            }
+            ctx.stroke();
+            if(isActive) {
+                ctx.lineTo(width, toY(0)); ctx.lineTo(0, toY(0)); ctx.fill();
+            }
+
+            let peakX = knots[i + Math.floor(K/2) + 1]; 
+            if(peakX >= GRID_MIN && peakX <= GRID_MAX){
+                let peakY = basis(i, K, peakX);
+                ctx.fillStyle = isActive ? "#e65100" : "#aaaaaa"; 
+                ctx.fillText("B"+i, toScreenX(peakX), toY(peakY) - 5);
+            }
+        }
+    }
+
+    // --- DRAW GRAPH 2 ---
+    function drawSplineGraph(activeIndices, inputX) {
+        const canvas = document.getElementById('canvas_spline');
+        const ctx = canvas.getContext('2d');
+        const height = canvas.height;
+        function toY(y) { return height/2 - (y * (height/5)); } // Slightly reduced scale for headroom
+
+        drawCommonElements(ctx, height, inputX);
+        // Zero Line
+        ctx.strokeStyle = "#ddd"; ctx.lineWidth = 1; ctx.beginPath();
+        ctx.moveTo(0, height/2); ctx.lineTo(width, height/2); ctx.stroke();
+
+        for(let i=0; i<num_coeffs; i++) {
+            let isActive = activeIndices.includes(i);
+            if (Math.abs(coeffs[i]) > 0.01 || isActive) {
+                ctx.strokeStyle = isActive ? "rgba(255, 140, 0, 0.8)" : "rgba(0, 120, 255, 0.2)"; 
+                ctx.lineWidth = isActive ? 3 : 2; 
+
+                ctx.beginPath();
+                for(let j=0; j<=width; j+=4) {
+                    let x = GRID_MIN + (j/width)*(GRID_MAX-GRID_MIN);
+                    let y = coeffs[i] * basis(i, K, x);
+                    if(j==0) ctx.moveTo(j, toY(y)); else ctx.lineTo(j, toY(y));
+                }
+                ctx.stroke();
+                
+                let peakX = knots[i + Math.floor(K/2) + 1]; 
+                if(peakX >= GRID_MIN && peakX <= GRID_MAX && Math.abs(coeffs[i]) > 0.15){
+                    let peakY = coeffs[i] * basis(i, K, peakX);
+                    ctx.fillStyle = isActive ? "#e65100" : "rgba(0, 80, 180, 0.7)";
+                    let yOffset = (coeffs[i]>0) ? 14 : -4; 
+                    let text = "wB"+i;
+                    ctx.font = "11px sans-serif";
+                    ctx.fillText(text, toScreenX(peakX), toY(peakY) + yOffset);
+                }
+            }
+        }
+
+        ctx.strokeStyle = "blue"; ctx.lineWidth = 3; ctx.beginPath();
+        let splineRes = evaluateSpline(inputX); 
+        for(let j=0; j<=width; j+=2) {
+            let x = GRID_MIN + (j/width)*(GRID_MAX-GRID_MIN);
+            let res = evaluateSpline(x);
+            if(j==0) ctx.moveTo(j, toY(res.sum)); else ctx.lineTo(j, toY(res.sum));
+        }
+        ctx.stroke();
+
+        let screenX = toScreenX(inputX);
+        ctx.fillStyle = "red"; ctx.beginPath(); ctx.arc(screenX, toY(splineRes.sum), 6, 0, Math.PI*2); ctx.fill();
+
+        splineRes.components.forEach(c => {
+            if(c.basis > 0.001) {
+                ctx.fillStyle = "orange"; 
+                ctx.beginPath(); ctx.arc(screenX, toY(c.val), 4, 0, Math.PI*2); ctx.fill();
+            }
+        });
+    }
+
+    // --- MAIN ---
+    function draw() {
+        let inputX = parseFloat(document.getElementById('input_x').value);
+        let activeIndices = [];
+        for(let i=0; i<num_coeffs; i++) if(basis(i, K, inputX) > 0.001) activeIndices.push(i);
+
+        const infoBox = document.getElementById('active-info');
+        if(activeIndices.length > 0) {
+            let names = activeIndices.map(i => `B${i}`).join(", ");
+            infoBox.innerHTML = `At Input X = <b>${inputX.toFixed(2)}</b>, the active basis functions are: <span class="highlight-text">${names}</span>.<br>Looking at Graph 1, you can see these are the only curves currently "under" the red line.`;
+        } else {
+            infoBox.innerHTML = "Input out of range.";
+        }
+
+        document.querySelectorAll('.slider-group').forEach(div => { div.style.background = "transparent"; });
+        activeIndices.forEach(idx => {
+            let sliderDiv = document.querySelector(`input[data-idx="${idx}"]`).parentElement;
+            if(sliderDiv) sliderDiv.style.background = "rgba(255, 165, 0, 0.2)"; 
+        });
+
+        drawBasisGraph(activeIndices, inputX);
+        drawSplineGraph(activeIndices, inputX);
+    }
+
+    const container = document.getElementById('coeffs_container');
+    coeffs.forEach((c, i) => {
+        let div = document.createElement('div');
+        div.className = 'slider-group';
+        div.innerHTML = `<label>c${i}</label><input type="range" min="-2" max="2" step="0.1" value="${c}" data-idx="${i}">`;
+        container.appendChild(div);
+    });
+
+    document.querySelectorAll('input[type=range]').forEach(input => {
+        input.addEventListener('input', (e) => {
+            if(e.target.id === 'input_x') document.getElementById('x_val_disp').innerText = parseFloat(e.target.value).toFixed(2);
+            else coeffs[e.target.getAttribute('data-idx')] = parseFloat(e.target.value);
+            draw();
+        });
+    });
+
+    draw();
+</script>
+</body>
+</html>
